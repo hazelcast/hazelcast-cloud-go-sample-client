@@ -9,13 +9,13 @@ import (
 func main() {
 
 	cfg := hazelcast.NewConfig()
-	cfg.GroupConfig().SetName("name")
-	cfg.GroupConfig().SetPassword("password")
+	cfg.GroupConfig().SetName("YOUR_CLUSTER_NAME")
+	cfg.GroupConfig().SetPassword("YOUR_CLUSTER_PASSWORD")
 	cfg.NetworkConfig().SSLConfig().SetEnabled(true)
 	cfg.NetworkConfig().SSLConfig().ServerName = "console.hazelcast.cloud"
 	discoveryCfg := config.NewCloudConfig()
 	discoveryCfg.SetEnabled(true)
-	discoveryCfg.SetDiscoveryToken("discoveryToken")
+	discoveryCfg.SetDiscoveryToken("YOUR_CLUSTER_DISCOVERY_TOKEN")
 	cfg.NetworkConfig().SetCloudConfig(discoveryCfg)
 
 	client, _ := hazelcast.NewClientWithConfig(cfg)
