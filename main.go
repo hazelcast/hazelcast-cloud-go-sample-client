@@ -20,12 +20,10 @@ func main() {
 
 	client, _ := hazelcast.NewClientWithConfig(cfg)
 
-	mp, _ := client.GetMap("theGenius")
-	mp.Put("vaccination", "Edward Jenner")
-	mp.Put("alternating current motor", "Nikola Tesla")
-	mp.Put("polonium and radium", "Marie Curie")
+	mp, _ := client.GetMap("map")
+	mp.Put("key", "value")
 	size, _ := mp.Size()
-	log.Println("You have " + string(size) + " people in your genius map.")
+	log.Println("You have " + string(size) + " entries in your map.")
 
 	client.Shutdown()
 }
