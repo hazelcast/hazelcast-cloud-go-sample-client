@@ -18,6 +18,7 @@ func main() {
 	keyFile,err := filepath.Abs("./key.pem")
   sslConfig.SetCaPath(caFile)
   sslConfig.AddClientCertAndEncryptedKeyPath(certFile, keyFile, "YOUR_SSL_PASSWORD")
+	sslConfig.ServerName = "hazelcast.cloud"
 	cfg.GroupConfig().SetName("YOUR_CLUSTER_NAME")
 	cfg.GroupConfig().SetPassword("YOUR_CLUSTER_PASSWORD")
 	discoveryCfg := config.NewCloudConfig()
