@@ -1,20 +1,23 @@
 package main
 
 import (
-	"github.com/hazelcast/hazelcast-go-client"
-	"github.com/hazelcast/hazelcast-go-client/config"
+	"fmt"
 	"log"
-	"os"
-	"io/ioutil"
+	"math/rand"
+	"path/filepath"
+	"time"
+
+	hazelcast "github.com/hazelcast/hazelcast-go-client"
+	"github.com/hazelcast/hazelcast-go-client/config"
 )
 
 func main() {
 	cfg := hazelcast.NewConfig()
 	sslConfig := cfg.NetworkConfig().SSLConfig()
     sslConfig.SetEnabled(true)
-	caFile,err := filepath.Abs("./ca.pem")
-	certFile,err := filepath.Abs("./cert.pem")
-	keyFile,err := filepath.Abs("./key.pem")
+	caFile,_ := filepath.Abs("./ca.pem")
+	certFile,_ := filepath.Abs("./cert.pem")
+	keyFile,_ := filepath.Abs("./key.pem")
     sslConfig.SetCaPath(caFile)
     sslConfig.AddClientCertAndEncryptedKeyPath(certFile, keyFile, "YOUR_SSL_PASSWORD")
 	sslConfig.ServerName = "hazelcast.cloud"
