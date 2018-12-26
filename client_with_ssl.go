@@ -28,6 +28,8 @@ func main() {
 	discoveryCfg.SetDiscoveryToken("YOUR_CLUSTER_DISCOVERY_TOKEN")
 	cfg.NetworkConfig().SetCloudConfig(discoveryCfg)
 	cfg.SetProperty("hazelcast.client.cloud.url", "YOUR_DISCOVERY_URL")
+	cfg.SetProperty(property.StatisticsEnabled.Name(), "true")
+	cfg.SetProperty(property.StatisticsPeriodSeconds.Name(), "1")
 
 	client, _ := hazelcast.NewClientWithConfig(cfg)
 
