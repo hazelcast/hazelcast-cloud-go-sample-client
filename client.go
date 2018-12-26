@@ -6,8 +6,9 @@ import (
 	"math/rand"
 	"time"
 
-	hazelcast "github.com/hazelcast/hazelcast-go-client"
+    hazelcast "github.com/hazelcast/hazelcast-go-client"
 	"github.com/hazelcast/hazelcast-go-client/config"
+	"github.com/hazelcast/hazelcast-go-client/config/property"
 )
 func main() {
 
