@@ -5,11 +5,11 @@ import (
 	"log"
 	"math/rand"
 	"time"
-
-    hazelcast "github.com/hazelcast/hazelcast-go-client"
+	"github.com/hazelcast/hazelcast-go-client"
 	"github.com/hazelcast/hazelcast-go-client/config"
 	"github.com/hazelcast/hazelcast-go-client/config/property"
 )
+
 func main() {
 
 	cfg := hazelcast.NewConfig()
@@ -26,25 +26,25 @@ func main() {
 
 	client, _ := hazelcast.NewClientWithConfig(cfg)
 
-    mp, _ := client.GetMap("map")
-    mp.Put("key", "value")
-    val, _ := mp.Get("key")
-    if val == "value" {
-        log.Println("Connection Successful!")
-        log.Println("Now, `map` will be filled with random entries.")
-        rand.Seed(time.Now().UTC().UnixNano())
-        for true {
-            randKey := rand.Intn(100000)
-            mp.Put("key"+string(randKey), "value"+string(randKey))
-            if randKey%10 == 0 {
-                size, _ := mp.Size()
-                log.Println(fmt.Sprintf("Map size: %d", size))
-            }
-            time.Sleep(100 * time.Millisecond)
-        }
-    } else {
-        panic("Connection failed, check your configuration.")
-    }
+	mp, _ := client.GetMap("map")
+	mp.Put("key", "value")
+	val, _ := mp.Get("key")
+	if val == "value" {
+		log.Println("Connection Successful!")
+		log.Println("Now, `map` will be filled with random entries.")
+		rand.Seed(time.Now().UTC().UnixNano())
+		for true {
+			randKey := rand.Intn(100000)
+			mp.Put("key"+string(randKey), "value"+string(randKey))
+			if randKey%10 == 0 {
+				size, _ := mp.Size()
+				log.Println(fmt.Sprintf("Map size: %d", size))
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
+	} else {
+		panic("Connection failed, check your configuration.")
+	}
 
-    client.Shutdown()
+	client.Shutdown()
 }
