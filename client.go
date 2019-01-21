@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
-	"time"
 	"github.com/hazelcast/hazelcast-go-client"
 	"github.com/hazelcast/hazelcast-go-client/config"
 	"github.com/hazelcast/hazelcast-go-client/config/property"
@@ -40,7 +39,6 @@ func main() {
 				size, _ := mp.Size()
 				log.Println(fmt.Sprintf("Map size: %d", size))
 			}
-			time.Sleep(100 * time.Millisecond)
 		}
 	} else {
 		panic("Connection failed, check your configuration.")
