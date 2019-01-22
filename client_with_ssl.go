@@ -10,7 +10,15 @@ import (
 	"github.com/hazelcast/hazelcast-go-client/config/property"
 )
 
-func main() {
+/**
+ *
+ * This is boilerplate application that configures client to connect Hazelcast Cloud cluster.
+ * After successful connection, it puts random entries into the map.
+ *
+ * See: https://docs.hazelcast.cloud/docs/go-client
+ *
+ */
+ func main() {
 	cfg := hazelcast.NewConfig()
 	sslConfig := cfg.NetworkConfig().SSLConfig()
 	sslConfig.SetEnabled(true)
