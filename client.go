@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
-	"log"
-	"math/rand"
 	"github.com/hazelcast/hazelcast-go-client"
 	"github.com/hazelcast/hazelcast-go-client/config"
 	"github.com/hazelcast/hazelcast-go-client/config/property"
+	"log"
+	"math/rand"
+	"time"
 )
 
 /**
