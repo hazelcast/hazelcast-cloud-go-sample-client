@@ -2,12 +2,12 @@ package main
 
 import (
 	"fmt"
-	"log"
-	"math/rand"
-	"path/filepath"
 	"github.com/hazelcast/hazelcast-go-client"
 	"github.com/hazelcast/hazelcast-go-client/config"
 	"github.com/hazelcast/hazelcast-go-client/config/property"
+	"log"
+	"math/rand"
+	"path/filepath"
 	"time"
 )
 
@@ -48,10 +48,12 @@ import (
 		log.Println("Connection Successful!")
 		log.Println("Now, `map` will be filled with random entries.")
 		rand.Seed(time.Now().UTC().UnixNano())
-		for true {
-			randKey := rand.Intn(100000)
-			mp.Put("key"+string(randKey), "value"+string(randKey))
-			if randKey%10 == 0 {
+		iterationCounter := 0
+		for {
+			randKey := string(rune(rand.Intn(100000)))
+			mp.Put("key" + randKey, "value" + randKey)
+			if iterationCounter++; iterationCounter == 10 {
+				iterationCounter = 0
 				size, _ := mp.Size()
 				log.Println(fmt.Sprintf("Map size: %d", size))
 			}
