@@ -1,66 +1,86 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"github.com/hazelcast/hazelcast-go-client"
-	"github.com/hazelcast/hazelcast-go-client/config"
-	"github.com/hazelcast/hazelcast-go-client/config/property"
+	"github.com/hazelcast/hazelcast-go-client/types"
 	"log"
 	"math/rand"
+	"os"
 	"path/filepath"
 	"time"
 )
 
 /**
- *
- * This is boilerplate application that configures client to connect Hazelcast Cloud cluster.
- * After successful connection, it puts random entries into the map.
- *
- * See: https://docs.hazelcast.cloud/docs/go-client
- *
+*
+* This is boilerplate application that configures client to connect Hazelcast Cloud cluster.
+* After successful connection, it puts random entries into the map.
+*
+* See: https://docs.hazelcast.cloud/docs/go-client
+*
  */
- func main() {
-	cfg := hazelcast.NewConfig()
-	sslConfig := cfg.NetworkConfig().SSLConfig()
-	sslConfig.SetEnabled(true)
-	caFile, _ := filepath.Abs("./ca.pem")
-	certFile, _ := filepath.Abs("./cert.pem")
-	keyFile, _ := filepath.Abs("./key.pem")
-	sslConfig.SetCaPath(caFile)
-	sslConfig.AddClientCertAndEncryptedKeyPath(certFile, keyFile, "YOUR_SSL_PASSWORD")
-	sslConfig.ServerName = "hazelcast.cloud"
-	cfg.GroupConfig().SetName("YOUR_CLUSTER_NAME")
-	cfg.GroupConfig().SetPassword("YOUR_CLUSTER_PASSWORD")
-	discoveryCfg := config.NewCloudConfig()
-	discoveryCfg.SetEnabled(true)
-	discoveryCfg.SetDiscoveryToken("YOUR_CLUSTER_DISCOVERY_TOKEN")
-	cfg.NetworkConfig().SetCloudConfig(discoveryCfg)
-	cfg.SetProperty("hazelcast.client.cloud.url", "YOUR_DISCOVERY_URL")
-	cfg.SetProperty(property.StatisticsEnabled.Name(), "true")
-	cfg.SetProperty(property.StatisticsPeriodSeconds.Name(), "1")
+func main() {
+	_ = os.Setenv("HZ_CLOUD_COORDINATOR_BASE_URL", "YOUR_DISCOVERY_URL")
+	ctx := context.Background()
+	config := hazelcast.NewConfig()
+	config.Cluster.Name = "YOUR_CLUSTER_NAME"
+	config.Cluster.Cloud.Enabled = true
+	config.Cluster.Cloud.Token = "YOUR_CLUSTER_DISCOVERY_TOKEN"
+	config.Stats.Enabled = true
+	config.Stats.Period = types.Duration(time.Second)
+	config.Logger.Level = "debug"
+	caFile, err := filepath.Abs("./ca.pem")
+	if err != nil {
+		panic(err)
+	}
+	certFile, err := filepath.Abs("./cert.pem")
+	if err != nil {
+		panic(err)
+	}
+	keyFile, err := filepath.Abs("./key.pem")
+	if err != nil {
+		panic(err)
+	}
+	config.Cluster.Network.SSL.Enabled = true
+	err = config.Cluster.Network.SSL.SetCAPath(caFile)
+	if err != nil {
+		panic(err)
+	}
+	err = config.Cluster.Network.SSL.AddClientCertAndEncryptedKeyPath(certFile, keyFile, "YOUR_SSL_PASSWORD")
+	if err != nil {
+		panic(err)
+	}
+	client, err := hazelcast.StartNewClientWithConfig(ctx, config)
+	if err != nil {
+		panic(err)
+	}
+	defer client.Shutdown(ctx)
 
-	client, _ := hazelcast.NewClientWithConfig(cfg)
+	log.Println("Connection Successful!")
 
-	mp, _ := client.GetMap("map")
-	mp.Put("key", "value")
-	val, _ := mp.Get("key")
-	if val == "value" {
-		log.Println("Connection Successful!")
-		log.Println("Now, `map` will be filled with random entries.")
-		rand.Seed(time.Now().UTC().UnixNano())
-		iterationCounter := 0
-		for {
-			randKey := string(rune(rand.Intn(100000)))
-			mp.Put("key" + randKey, "value" + randKey)
-			if iterationCounter++; iterationCounter == 10 {
-				iterationCounter = 0
-				size, _ := mp.Size()
-				log.Println(fmt.Sprintf("Map size: %d", size))
-			}
+	log.Println("Now, `map` will be filled with random entries.")
+
+	mp, err := client.GetMap(ctx, "map")
+	if err != nil {
+		panic(err)
+	}
+	rand.Seed(time.Now().UTC().UnixNano())
+	iterationCounter := 0
+	for {
+		randKey := string(rune(rand.Intn(100000)))
+		_, err := mp.Put(ctx, "key"+randKey, "value"+randKey)
+		if err != nil {
+			panic(err)
 		}
-	} else {
-		panic("Connection failed, check your configuration.")
+		if iterationCounter++; iterationCounter == 10 {
+			iterationCounter = 0
+			size, err := mp.Size(ctx)
+			if err != nil {
+				panic(err)
+			}
+			log.Println(fmt.Sprintf("Map size: %d", size))
+		}
 	}
 
-	client.Shutdown()
 }
