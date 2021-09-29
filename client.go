@@ -29,7 +29,6 @@ func main() {
 	config.Cluster.Cloud.Token = "YOUR_CLUSTER_DISCOVERY_TOKEN"
 	config.Stats.Enabled = true
 	config.Stats.Period = types.Duration(time.Second)
-	config.Logger.Level = "debug"
 
 	client, err := hazelcast.StartNewClientWithConfig(ctx, config)
 	if err != nil {

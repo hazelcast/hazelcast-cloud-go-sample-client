@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"github.com/hazelcast/hazelcast-go-client"
 	"github.com/hazelcast/hazelcast-go-client/types"
@@ -29,7 +30,6 @@ func main() {
 	config.Cluster.Cloud.Token = "YOUR_CLUSTER_DISCOVERY_TOKEN"
 	config.Stats.Enabled = true
 	config.Stats.Period = types.Duration(time.Second)
-	config.Logger.Level = "debug"
 	caFile, err := filepath.Abs("./ca.pem")
 	if err != nil {
 		panic(err)
@@ -43,6 +43,7 @@ func main() {
 		panic(err)
 	}
 	config.Cluster.Network.SSL.Enabled = true
+	config.Cluster.Network.SSL.SetTLSConfig(&tls.Config{ServerName: "hazelcast.cloud"})
 	err = config.Cluster.Network.SSL.SetCAPath(caFile)
 	if err != nil {
 		panic(err)
