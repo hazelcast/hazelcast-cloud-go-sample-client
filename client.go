@@ -3,12 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/hazelcast/hazelcast-go-client"
-	"github.com/hazelcast/hazelcast-go-client/types"
 	"log"
 	"math/rand"
 	"os"
 	"time"
+
+	"github.com/hazelcast/hazelcast-go-client"
+	"github.com/hazelcast/hazelcast-go-client/types"
 )
 
 /**
@@ -16,7 +17,7 @@ import (
  * This is boilerplate application that configures client to connect Hazelcast Cloud cluster.
  * After successful connection, it puts random entries into the map.
  *
- * See: https://docs.hazelcast.cloud/docs/go-client
+ * See: https://docs.hazelcast.com/cloud/go-client
  *
  */
 func main() {
