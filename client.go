@@ -11,14 +11,13 @@ import (
 	"time"
 )
 
-/**
- *
- * This is a boilerplate application that configures the client to connect to your Hazelcast Viridian cluster.
- * After a successful connection, the client puts random entries into the map.
- *
- * See: https://docs.hazelcast.cloud/docs/go-client
- *
- */
+/*
+ * This is a boilerplate client application that connects to your Hazelcast Viridian cluster.
+ * See: https://docs.hazelcast.com/cloud/get-started
+ * 
+ * Snippets of this code are included as examples in our documentation,
+ * using the tag:: comments.
+*/
 func main() {
 	// tag::env[]
 	// Define which environment to use such as production, uat, or dev
@@ -27,13 +26,22 @@ func main() {
 
 	ctx := context.Background()
 
-	// tag::config[]
 	// Configure the client to connect to the cluster
+	// tag::config[]
 	config := hazelcast.NewConfig()
 	config.Cluster.Name = "YOUR_CLUSTER_NAME"
 	config.Cluster.Network.SSL.Enabled = false
 	config.Cluster.Cloud.Enabled = true
+	/* The cluster discovery token is a unique token that maps to the current IP address of the cluster.
+			Cluster IP addresses may change.
+			This token allows clients to find out the current IP address
+			of the cluster and connect to it.
+	*/
 	config.Cluster.Cloud.Token = "YOUR_CLUSTER_DISCOVERY_TOKEN"
+	/* Allow the client to collect metrics
+	 * so that you can see client statistics in Management Center.
+	 * See https://pkg.go.dev/github.com/hazelcast/hazelcast-go-client#hdr-Management_Center_Integration
+	*/
 	config.Stats.Enabled = true
 	config.Stats.Period = types.Duration(time.Second)
 
