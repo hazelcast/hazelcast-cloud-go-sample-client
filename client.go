@@ -13,15 +13,22 @@ import (
 
 /**
  *
- * This is boilerplate application that configures client to connect Hazelcast Cloud cluster.
- * After successful connection, it puts random entries into the map.
+ * This is a boilerplate application that configures the client to connect to your Hazelcast Viridian cluster.
+ * After a successful connection, the client puts random entries into the map.
  *
  * See: https://docs.hazelcast.cloud/docs/go-client
  *
  */
 func main() {
+	// tag::env[]
+	// Define which environment to use such as production, uat, or dev
 	_ = os.Setenv("HZ_CLOUD_COORDINATOR_BASE_URL", "YOUR_DISCOVERY_URL")
+	// end::env[]
+
 	ctx := context.Background()
+
+	// tag::config[]
+	// Configure the client to connect to the cluster
 	config := hazelcast.NewConfig()
 	config.Cluster.Name = "YOUR_CLUSTER_NAME"
 	config.Cluster.Network.SSL.Enabled = false
@@ -34,14 +41,21 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	// end::config[]
+
 	defer client.Shutdown(ctx)
+
 	log.Println("Connection Successful!")
+
 	log.Println("Now, `map` will be filled with random entries.")
 
+	// Create the map
 	mp, err := client.GetMap(ctx, "map")
 	if err != nil {
 		panic(err)
 	}
+
+	// Add random entries to the map
 	rand.Seed(time.Now().UTC().UnixNano())
 	iterationCounter := 0
 	for {
