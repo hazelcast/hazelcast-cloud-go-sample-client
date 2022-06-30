@@ -13,23 +13,41 @@ import (
 	"time"
 )
 
-/**
-*
-* This is boilerplate application that configures client to connect Hazelcast Cloud cluster.
-* After successful connection, it puts random entries into the map.
-*
-* See: https://docs.hazelcast.cloud/docs/go-client
-*
- */
+/*
+ * This is a boilerplate client application that connects to your Hazelcast Viridian cluster.
+ * See: https://docs.hazelcast.com/cloud/get-started
+ * 
+ * Snippets of this code are included as examples in our documentation,
+ * using the tag:: comments.
+*/
 func main() {
+	// tag::env[]
+	// Define which environment to use such as production, uat, or dev
 	_ = os.Setenv("HZ_CLOUD_COORDINATOR_BASE_URL", "YOUR_DISCOVERY_URL")
+	// end::env[]
+
 	ctx := context.Background()
+
+	// Configure the client to connect to the cluster
+	// tag::config[]
 	config := hazelcast.NewConfig()
 	config.Cluster.Name = "YOUR_CLUSTER_NAME"
 	config.Cluster.Cloud.Enabled = true
+	/* The cluster discovery token is a unique token that maps to the current IP address of the cluster.
+		Cluster IP addresses may change.
+		This token allows clients to find out the current IP address
+		of the cluster and connect to it.
+	*/
 	config.Cluster.Cloud.Token = "YOUR_CLUSTER_DISCOVERY_TOKEN"
+	/* Allow the client to collect metrics
+	 * so that you can see client statistics in Management Center.
+	 * See https://pkg.go.dev/github.com/hazelcast/hazelcast-go-client#hdr-Management_Center_Integration
+	*/
 	config.Stats.Enabled = true
 	config.Stats.Period = types.Duration(time.Second)
+	// Configure TLS
+	// When you download the sample client from the console,
+	// the files are downloaded along with this client code.
 	caFile, err := filepath.Abs("./ca.pem")
 	if err != nil {
 		panic(err)
@@ -56,16 +74,21 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	// end::config[]
+
 	defer client.Shutdown(ctx)
 
 	log.Println("Connection Successful!")
 
 	log.Println("Now, `map` will be filled with random entries.")
 
+	// Create the map
 	mp, err := client.GetMap(ctx, "map")
 	if err != nil {
 		panic(err)
 	}
+
+	// Add random entries to the map
 	rand.Seed(time.Now().UTC().UnixNano())
 	iterationCounter := 0
 	for {
