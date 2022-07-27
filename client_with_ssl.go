@@ -386,7 +386,6 @@ func selectCountriesAndCities(sqlService sql.Service) {
 func nonStopMapExample(client *hazelcast.Client) {
 	fmt.Println("Now the map named 'map' will be filled with random entries.")
 	ctx := context.TODO()
-
 	mp, err := client.GetMap(ctx, "map")
 	if err != nil {
 		panic(err)
