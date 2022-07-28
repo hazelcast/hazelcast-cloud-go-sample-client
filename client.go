@@ -42,11 +42,11 @@ func city(country string, name string, population int64) serialization.JSON {
 	return serialization.JSON(fmt.Sprintf(`{"country":"%s", "city": "%s", "population":"%d"}`, country, name, population))
 }
 
-func country(country string, name string) serialization.JSON {
-	return serialization.JSON(fmt.Sprintf(`{"isoCode":"%s", "country": "%s"}`, country, name))
+func country(isoCode string, name string) serialization.JSON {
+	return serialization.JSON(fmt.Sprintf(`{"isoCode":"%s", "country": "%s"}`, isoCode, name))
 }
 
-func mustPut(value interface{}, err error) {
+func mustPut(_ interface{}, err error) {
 	if err != nil {
 		panic(err)
 	}
@@ -148,6 +148,7 @@ func selectAllCapitals(sqlService sql.Service) {
 	if err != nil {
 		fmt.Errorf("querying: %w", err)
 	}
+	defer result.Close()
 	iterator, err := result.Iterator()
 	if err != nil {
 		fmt.Errorf("acquiring iterator: %w", err)
@@ -171,6 +172,7 @@ func selectCapitalNames(sqlService sql.Service) {
 	if err != nil {
 		fmt.Errorf("querying: %w", err)
 	}
+	defer result.Close()
 	iter, err := result.Iterator()
 	if err != nil {
 		fmt.Errorf("acquiring iterator: %w", err)
@@ -251,6 +253,7 @@ func selectAllCountries(sqlService sql.Service) {
 	if err != nil {
 		fmt.Errorf("querying: %w", err)
 	}
+	defer result.Close()
 	iter, err := result.Iterator()
 	if err != nil {
 		fmt.Errorf("acquiring iterator: %w", err)
@@ -311,6 +314,7 @@ func selectCitiesByCountry(sqlService sql.Service, country string) {
 	if err != nil {
 		fmt.Errorf("querying: %w", err)
 	}
+	defer result.Close()
 	iter, err := result.Iterator()
 	if err != nil {
 		fmt.Errorf("acquiring iterator: %w", err)
@@ -339,6 +343,7 @@ func selectCountriesAndCities(sqlService sql.Service) {
 	if err != nil {
 		fmt.Errorf("querying: %w", err)
 	}
+	defer result.Close()
 	iter, err := result.Iterator()
 	if err != nil {
 		fmt.Errorf("acquiring iterator: %w", err)
