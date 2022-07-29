@@ -38,12 +38,22 @@ func main() {
 	// nonStopMapExample(client)
 }
 
-func city(country string, name string, population int64) serialization.JSON {
-	return serialization.JSON(fmt.Sprintf(`{"country":"%s", "city": "%s", "population":"%d"}`, country, name, population))
+func city(country string, name string, population int) serialization.JSON {
+	text := fmt.Sprintf(`{
+		"country":"%s", 
+		"city": "%s", 
+		"population":"%d"
+	}`, country, name, population)
+	return serialization.JSON(text)
+
 }
 
 func country(isoCode string, name string) serialization.JSON {
-	return serialization.JSON(fmt.Sprintf(`{"isoCode":"%s", "country": "%s"}`, isoCode, name))
+	text := fmt.Sprintf(`{
+		"isoCode":"%s", 
+		"country": "%s"
+	}`, isoCode, name)
+	return serialization.JSON(text)
 }
 
 func mustPut(_ interface{}, err error) {
