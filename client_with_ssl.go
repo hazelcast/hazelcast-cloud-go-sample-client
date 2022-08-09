@@ -10,6 +10,7 @@ import (
 	"github.com/hazelcast/hazelcast-go-client/types"
 	"log"
 	"math/rand"
+	"os"
 	"path/filepath"
 	"time"
 )
@@ -19,6 +20,7 @@ import (
 //
 // See: https://docs.hazelcast.cloud/docs/go-client
 func main() {
+	_ = os.Setenv("HZ_CLOUD_COORDINATOR_BASE_URL", "YOUR_DISCOVERY_URL")
 	ctx := context.Background()
 	config := hazelcast.NewConfig()
 	config.Cluster.Name = "YOUR_CLUSTER_NAME"
