@@ -2,7 +2,7 @@ module local/build
 
 go 1.17
 
-require github.com/hazelcast/hazelcast-go-client v1.1.0
+require github.com/hazelcast/hazelcast-go-client v1.3.0
 
 require (
 	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
