@@ -1,6 +1,6 @@
 module local/build
 
-go 1.17
+go 1.18
 
 require github.com/hazelcast/hazelcast-go-client v1.4.0
 

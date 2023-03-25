@@ -6,9 +6,7 @@ import (
 	"fmt"
 	"github.com/hazelcast/hazelcast-go-client"
 	"github.com/hazelcast/hazelcast-go-client/serialization"
-	"github.com/hazelcast/hazelcast-go-client/sql"
 	"github.com/hazelcast/hazelcast-go-client/types"
-	"os"
 	"path/filepath"
 	"reflect"
 	"time"
@@ -19,7 +17,6 @@ import (
 //
 // See: https://docs.hazelcast.com/cloud/get-started
 func main() {
-	_ = os.Setenv("HZ_CLOUD_COORDINATOR_BASE_URL", "YOUR_DISCOVERY_URL")
 	ctx := context.Background()
 	config := hazelcast.NewConfig()
 	config.Cluster.Name = "YOUR_CLUSTER_NAME"
@@ -27,28 +24,35 @@ func main() {
 	config.Cluster.Cloud.Token = "YOUR_CLUSTER_DISCOVERY_TOKEN"
 	config.Stats.Enabled = true
 	config.Stats.Period = types.Duration(time.Second)
+	
 	caFile, err := filepath.Abs("./ca.pem")
 	if err != nil {
 		panic(err)
 	}
+
 	certFile, err := filepath.Abs("./cert.pem")
 	if err != nil {
 		panic(err)
 	}
+
 	keyFile, err := filepath.Abs("./key.pem")
 	if err != nil {
 		panic(err)
 	}
+
 	config.Cluster.Network.SSL.Enabled = true
 	config.Cluster.Network.SSL.SetTLSConfig(&tls.Config{ServerName: "hazelcast.cloud"})
+
 	err = config.Cluster.Network.SSL.SetCAPath(caFile)
 	if err != nil {
 		panic(err)
 	}
+
 	err = config.Cluster.Network.SSL.AddClientCertAndEncryptedKeyPath(certFile, keyFile, "YOUR_SSL_PASSWORD")
 	if err != nil {
 		panic(err)
 	}
+
 	client, err := hazelcast.StartNewClientWithConfig(ctx, config)
 	if err != nil {
 		panic(err)
@@ -56,12 +60,12 @@ func main() {
 	defer client.Shutdown(ctx)
 	fmt.Println("Connection Successful!")
 
-	createMapping(client.SQL())
+	createMapping(client)
 	populateCities(client)
 	fetchCities(client)
 }
 
-func createMapping(sqlService sql.Service) {
+func createMapping(client *hazelcast.Client) {
 	// See: https://docs.hazelcast.com/hazelcast/latest/sql/mapping-to-maps
 	fmt.Print("\nCreating the mapping...")
 	mappingQuery := fmt.Sprintf(`
@@ -75,7 +79,7 @@ func createMapping(sqlService sql.Service) {
 			'keyFormat' = 'int',
 			'valueFormat' = 'compact',
 			'valueCompactTypeName' = 'city')`)
-	_, err := sqlService.Execute(context.Background(), mappingQuery)
+	_, err := client.SQL().Execute(context.Background(), mappingQuery)
 	if err != nil {
 		panic(err)
 	}
