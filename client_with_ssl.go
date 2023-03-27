@@ -163,27 +163,27 @@ func fetchCities(client *hazelcast.Client) {
 	for iterator.HasNext() {
 		row, err := iterator.Next()
 		if err != nil {
-			fmt.Errorf("iterating: %w", err)
+			panic(fmt.Errorf("iterating: %w", err))
 		}
 
 		id, err := row.GetByColumnName("__key")
 		if err != nil {
-			panic(err)
+			panic(fmt.Errorf("getting __key column by name: %w", err))
 		}
 
 		c, err := row.GetByColumnName("this")
 		if err != nil {
-			panic(err)
+			panic(fmt.Errorf("getting this column by name: %w", err))
 		}
 		city := c.(City)
 
 		fmt.Printf("| %4d | %20s | %20s | %15d |\n", id, city.Country, city.CityName, city.Population)
 	}
 
-	fmt.Println("\n!! Hint !! You can execute your SQL queries on your Viridian cluster over the management center. " +
-		"\n 1. Go to 'Management Center' of your Hazelcast Viridian cluster. " +
-		"\n 2. Open the 'SQL Browser'. " +
-		"\n 3. Try to execute 'SELECT * FROM cities'.")
+	fmt.Println("!! Hint !! You can execute your SQL queries on your Viridian cluster over the management center.")
+	fmt.Println(" 1. Go to 'Management Center' of your Hazelcast Viridian cluster. ")
+	fmt.Println(" 2. Open the 'SQL Browser'. ")
+	fmt.Println(" 3. Try to execute 'SELECT * FROM cities'.")
 }
 
 type City struct {
