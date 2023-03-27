@@ -22,14 +22,16 @@ import (
 	"fmt"
 	"github.com/hazelcast/hazelcast-go-client"
 	"github.com/hazelcast/hazelcast-go-client/serialization"
+	"github.com/hazelcast/hazelcast-go-client/sql"
 	"github.com/hazelcast/hazelcast-go-client/types"
 	"path/filepath"
 	"reflect"
 	"time"
 )
 
-// This is boilerplate application that configures client to connect Hazelcast Cloud cluster.
-// After successful connection, it runs the uncommented examples.
+// A sample application that configures a client to connect to a Hazelcast Viridian cluster
+// over TLS, and to then insert and fetch data with SQL, thus testing that the connection to
+// the Hazelcast Viridian cluster is successful.
 //
 // See: https://docs.hazelcast.com/cloud/get-started
 func main() {
@@ -40,7 +42,7 @@ func main() {
 	config.Cluster.Cloud.Token = "YOUR_CLUSTER_DISCOVERY_TOKEN"
 	config.Stats.Enabled = true
 	config.Stats.Period = types.Duration(time.Second)
-	
+
 	caFile, err := filepath.Abs("./ca.pem")
 	if err != nil {
 		panic(err)
@@ -68,6 +70,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	config.Serialization.Compact.SetSerializers(&CitySerializer{})
 
 	client, err := hazelcast.StartNewClientWithConfig(ctx, config)
 	if err != nil {
@@ -103,7 +106,6 @@ func createMapping(client *hazelcast.Client) {
 }
 
 func populateCities(client *hazelcast.Client) {
-	ctx := context.Background()
 	fmt.Print("\nInserting data via SQL...")
 	insertQuery := fmt.Sprintf(`INSERT INTO cities 
 										(__key, city, country, population) VALUES
@@ -117,36 +119,41 @@ func populateCities(client *hazelcast.Client) {
 
 	_, err := client.SQL().Execute(context.Background(), insertQuery)
 	if err != nil {
-		fmt.Print("FAILED. ", err)
+		// don't panic for duplicated keys.
+		fmt.Errorf("FAILED. %s", err)
 	} else {
 		fmt.Print("OK.")
 	}
 
 	fmt.Print("\nPutting a city into 'cities' map...")
-	cityMap, err := client.GetMap(ctx, "cities")
+	cityMap, err := client.GetMap(context.Background(), "cities")
 	if err != nil {
 		panic(err)
 	}
 
+	// Let's also add a city as object.
 	city := City{Country: "Brazil", CityName: "Rio de Janeiro", Population: 13634274}
-	cityMap.Put(ctx, 8, city)
+	_, err = cityMap.Put(context.Background(), int32(8), city)
+	if err != nil {
+		panic(fmt.Errorf("FAILED. %s", err))
+	}
 	fmt.Print("OK.")
 }
 
 func fetchCities(client *hazelcast.Client) {
 	fmt.Print("\nFetching cities via SQL...")
-	ctx := context.Background()
 
-	result, err := client.SQL().Execute(ctx, "SELECT __key,this FROM cities")
+	stmt := sql.NewStatement("SELECT __key,this FROM cities")
+	result, err := client.SQL().ExecuteStatement(context.Background(), stmt)
 	if err != nil {
-		fmt.Errorf("querying: %w", err)
+		panic(fmt.Errorf("querying: %w", err))
 	}
 
 	defer result.Close()
 
 	iterator, err := result.Iterator()
 	if err != nil {
-		fmt.Errorf("acquiring iterator: %w", err)
+		panic(fmt.Errorf("acquiring iterator: %w", err))
 	}
 
 	fmt.Print("OK.")
@@ -159,18 +166,24 @@ func fetchCities(client *hazelcast.Client) {
 			fmt.Errorf("iterating: %w", err)
 		}
 
-		id := mustGet(row.GetByColumnName("__key"))
-		city := mustGet(row.GetByColumnName("this")).(City)
+		id, err := row.GetByColumnName("__key")
+		if err != nil {
+			panic(err)
+		}
 
-		fmt.Printf("| %4s | %20s | %20s | %15d |", id, city.Country, city.CityName, city.Population)
-	}
-}
+		c, err := row.GetByColumnName("this")
+		if err != nil {
+			panic(err)
+		}
+		city := c.(City)
 
-func mustGet(value interface{}, err error) interface{} {
-	if err != nil {
-		panic(err)
+		fmt.Printf("| %4d | %20s | %20s | %15d |\n", id, city.Country, city.CityName, city.Population)
 	}
-	return value
+
+	fmt.Println("\n!! Hint !! You can execute your SQL queries on your Viridian cluster over the management center. " +
+		"\n 1. Go to 'Management Center' of your Hazelcast Viridian cluster. " +
+		"\n 2. Open the 'SQL Browser'. " +
+		"\n 3. Try to execute 'SELECT * FROM cities'.")
 }
 
 type City struct {
@@ -181,6 +194,13 @@ type City struct {
 
 // CitySerializer serializes the City object
 type CitySerializer struct{}
+
+func (s CitySerializer) Write(w serialization.CompactWriter, value interface{}) {
+	v := value.(City)
+	w.WriteString("city", &v.CityName)
+	w.WriteString("country", &v.Country)
+	w.WriteInt32("population", v.Population)
+}
 
 func (s CitySerializer) Type() reflect.Type {
 	return reflect.TypeOf(City{})
