@@ -120,7 +120,7 @@ func populateCities(client *hazelcast.Client) {
 	_, err := client.SQL().Execute(context.Background(), insertQuery)
 	if err != nil {
 		// don't panic for duplicated keys.
-		fmt.Errorf("FAILED. %s", err)
+		fmt.Errorf("failed. %s", err)
 	} else {
 		fmt.Print("OK.")
 	}
@@ -135,7 +135,7 @@ func populateCities(client *hazelcast.Client) {
 	city := City{Country: "Brazil", CityName: "Rio de Janeiro", Population: 13634274}
 	_, err = cityMap.Put(context.Background(), int32(8), city)
 	if err != nil {
-		panic(fmt.Errorf("FAILED. %s", err))
+		panic(fmt.Errorf("failed. %s", err))
 	}
 	fmt.Print("OK.")
 }
