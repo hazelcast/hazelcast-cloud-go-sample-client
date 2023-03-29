@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2008-2023, Hazelcast, Inc. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License")
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package main
 
 import (
@@ -8,19 +24,17 @@ import (
 	"github.com/hazelcast/hazelcast-go-client/serialization"
 	"github.com/hazelcast/hazelcast-go-client/sql"
 	"github.com/hazelcast/hazelcast-go-client/types"
-	"log"
-	"math/rand"
-	"os"
 	"path/filepath"
+	"reflect"
 	"time"
 )
 
-// This is boilerplate application that configures client to connect Hazelcast Cloud cluster.
-// After successful connection, it runs the uncommented examples.
+// A sample application that configures a client to connect to a Hazelcast Viridian cluster
+// over TLS, and to then insert and fetch data with SQL, thus testing that the connection to
+// the Hazelcast Viridian cluster is successful.
 //
-// See: https://docs.hazelcast.cloud/docs/go-client
+// See: https://docs.hazelcast.com/cloud/get-started
 func main() {
-	_ = os.Setenv("HZ_CLOUD_COORDINATOR_BASE_URL", "YOUR_DISCOVERY_URL")
 	ctx := context.Background()
 	config := hazelcast.NewConfig()
 	config.Cluster.Name = "YOUR_CLUSTER_NAME"
@@ -28,28 +42,36 @@ func main() {
 	config.Cluster.Cloud.Token = "YOUR_CLUSTER_DISCOVERY_TOKEN"
 	config.Stats.Enabled = true
 	config.Stats.Period = types.Duration(time.Second)
+
 	caFile, err := filepath.Abs("./ca.pem")
 	if err != nil {
 		panic(err)
 	}
+
 	certFile, err := filepath.Abs("./cert.pem")
 	if err != nil {
 		panic(err)
 	}
+
 	keyFile, err := filepath.Abs("./key.pem")
 	if err != nil {
 		panic(err)
 	}
+
 	config.Cluster.Network.SSL.Enabled = true
 	config.Cluster.Network.SSL.SetTLSConfig(&tls.Config{ServerName: "hazelcast.cloud"})
+
 	err = config.Cluster.Network.SSL.SetCAPath(caFile)
 	if err != nil {
 		panic(err)
 	}
+
 	err = config.Cluster.Network.SSL.AddClientCertAndEncryptedKeyPath(certFile, keyFile, "YOUR_SSL_PASSWORD")
 	if err != nil {
 		panic(err)
 	}
+	config.Serialization.Compact.SetSerializers(&CitySerializer{})
+
 	client, err := hazelcast.StartNewClientWithConfig(ctx, config)
 	if err != nil {
 		panic(err)
@@ -57,371 +79,153 @@ func main() {
 	defer client.Shutdown(ctx)
 	fmt.Println("Connection Successful!")
 
-	// Uncomment the example you want to run.
-	mapExample(client)
-	// sqlExample(client)
-	// jsonSerializationExample(client)
-	// nonStopMapExample(client)
-}
-
-func city(country string, name string, population int) serialization.JSON {
-	text := fmt.Sprintf(`{
-		"country":"%s", 
-		"city": "%s", 
-		"population":"%d"
-	}`, country, name, population)
-	return serialization.JSON(text)
-
-}
-
-func country(isoCode string, name string) serialization.JSON {
-	text := fmt.Sprintf(`{
-		"isoCode":"%s", 
-		"country": "%s"
-	}`, isoCode, name)
-	return serialization.JSON(text)
-}
-
-func mustPut(_ interface{}, err error) {
-	if err != nil {
-		panic(err)
-	}
-}
-
-func mustGet(value interface{}, err error) interface{} {
-	if err != nil {
-		panic(err)
-	}
-	return value
-}
-
-// mapExample shows how to work with Hazelcast maps.
-// It simply puts a bunch of entries to the map.
-func mapExample(client *hazelcast.Client) {
-	ctx := context.Background()
-	cities, err := client.GetMap(ctx, "cities")
-	if err != nil {
-		panic(err)
-	}
-	mustPut(cities.Put(ctx, "1", city("United Kingdom", "London", 9_540_576)))
-	mustPut(cities.Put(ctx, "2", city("United Kingdom", "Manchester", 2_770_434)))
-	mustPut(cities.Put(ctx, "3", city("United States", "New York", 19_223_191)))
-	mustPut(cities.Put(ctx, "4", city("United States", "Los Angeles", 3_985_520)))
-	mustPut(cities.Put(ctx, "5", city("Turkey", "Ankara", 5_309_690)))
-	mustPut(cities.Put(ctx, "6", city("Turkey", "Istanbul", 15_636_243)))
-	mustPut(cities.Put(ctx, "7", city("Brazil", "Sao Paulo", 22_429_800)))
-	mustPut(cities.Put(ctx, "8", city("Brazil", "Rio de Janeiro", 13_634_274)))
-	mapSize, err := cities.Size(ctx)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Printf("'cities' map now contains %d entries.\n", mapSize)
-	fmt.Println("--------------------")
-}
-
-// sqlExample shows how to work with Hazelcast SQL queries.
-// It maps the "capitals" map to a database table and runs queries on it.
-func sqlExample(client *hazelcast.Client) {
-	sqlService := client.SQL()
-	// Separate examples to show the SQL support of Hazelcast Go Client
-	createMappingForCapitals(sqlService)
-	clearCapitals(sqlService)
-	populateCapitals(sqlService)
-	selectAllCapitals(sqlService)
-	selectCapitalNames(sqlService)
-}
-
-func createMappingForCapitals(sqlService sql.Service) {
-	// See: https://docs.hazelcast.com/hazelcast/5.1/sql/mapping-to-maps
-	fmt.Println("Creating a mapping...")
-	mappingQuery := fmt.Sprintf(`
-        CREATE OR REPLACE MAPPING capitals TYPE IMap
-		OPTIONS (
-			'keyFormat' = 'varchar',
-			'valueFormat' = 'varchar'
-	)`)
-	_, err := sqlService.Execute(context.Background(), mappingQuery)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("The mapping has been created successfully.")
-	fmt.Println("--------------------")
-}
-
-func clearCapitals(sqlService sql.Service) {
-	fmt.Println("Deleting data via SQL...")
-	_, err := sqlService.Execute(context.Background(), "DELETE FROM capitals")
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("The data has been deleted successfully.")
-	fmt.Println("--------------------")
-}
-
-func populateCapitals(sqlService sql.Service) {
-	fmt.Println("Inserting data via SQL...")
-	insertQuery := fmt.Sprintf(`
-        INSERT INTO capitals VALUES
-			('Australia','Canberra'),
-			('Croatia','Zagreb'),
-			('Czech Republic','Prague'),
-			('England','London'),
-			('Turkey','Ankara'),
-			('United States','Washington, DC');
-	`)
-	_, err := sqlService.Execute(context.Background(), insertQuery)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("The data has been inserted successfully.")
-	fmt.Println("--------------------")
-}
-
-func selectAllCapitals(sqlService sql.Service) {
-	fmt.Println("Retrieving all the data via SQL...")
-	ctx := context.Background()
-	result, err := sqlService.Execute(ctx, "SELECT * FROM capitals")
-	if err != nil {
-		fmt.Errorf("querying: %w", err)
-	}
-	defer result.Close()
-	iterator, err := result.Iterator()
-	if err != nil {
-		fmt.Errorf("acquiring iterator: %w", err)
-	}
-	for iterator.HasNext() {
-		row, err := iterator.Next()
-		if err != nil {
-			fmt.Errorf("iterating: %w", err)
-		}
-		country := mustGet(row.Get(0))
-		city := mustGet(row.Get(1))
-		fmt.Printf("%s - %s\n", country, city)
-	}
-	fmt.Println("--------------------")
-}
-
-func selectCapitalNames(sqlService sql.Service) {
-	ctx := context.Background()
-	fmt.Println("Retrieving the capital name via SQL...")
-	result, err := sqlService.Execute(ctx, "SELECT __key, this FROM capitals WHERE __key = ?", "United States")
-	if err != nil {
-		fmt.Errorf("querying: %w", err)
-	}
-	defer result.Close()
-	iter, err := result.Iterator()
-	if err != nil {
-		fmt.Errorf("acquiring iterator: %w", err)
-	}
-	for iter.HasNext() {
-		row, err := iter.Next()
-		if err != nil {
-			fmt.Errorf("iterating: %w", err)
-		}
-		country := mustGet(row.GetByColumnName("__key"))
-		city := mustGet(row.GetByColumnName("this"))
-		fmt.Printf("Country name: %s; Capital name: %s\n", country, city)
-	}
-	fmt.Println("--------------------")
-}
-
-// jsonSerializationExample shows how to work with Hazelcast SQL queries via Maps that
-// contains JSON serialized values.
-//
-// (1) Select single json element data from a Map.
-// (2) Select data from Map with filtering.
-// (3) Join data from two Maps and select json elements.
-func jsonSerializationExample(client *hazelcast.Client) {
-	sqlService := client.SQL()
-	// Separate examples to show JSON type support of Hazelcast Go Client
-	createMappingForCountries(sqlService)
-	populateCountriesWithMap(client)
-	selectAllCountries(sqlService)
-	createMappingForCities(sqlService)
+	createMapping(client)
 	populateCities(client)
-	selectCitiesByCountry(sqlService, "AU")
-	selectCountriesAndCities(sqlService)
+	fetchCities(client)
 }
 
-func createMappingForCountries(sqlService sql.Service) {
-	// see: https://docs.hazelcast.com/hazelcast/5.1/sql/mapping-to-maps#json-objects
-	fmt.Println("Creating mapping for countries...")
+func createMapping(client *hazelcast.Client) {
+	// See: https://docs.hazelcast.com/hazelcast/latest/sql/mapping-to-maps
+	fmt.Print("\nCreating the mapping...")
 	mappingQuery := fmt.Sprintf(`
-        CREATE OR REPLACE MAPPING country (
-			__key VARCHAR,
-			isoCode VARCHAR,
-			country VARCHAR
-		)
-        TYPE IMAP 
-        OPTIONS (
-            'keyFormat' = 'varchar',
-            'valueFormat' = 'json-flat'
-		)`)
-	_, err := sqlService.Execute(context.Background(), mappingQuery)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("Mapping for countries has been created.")
-	fmt.Println("--------------------")
-}
-
-func populateCountriesWithMap(client *hazelcast.Client) {
-	// see: https://docs.hazelcast.com/hazelcast/5.1/data-structures/creating-a-map#writing-json-to-a-map
-	ctx := context.Background()
-	fmt.Println("Populating 'countries' map with JSON values...")
-	countries, err := client.GetMap(ctx, "country")
-	if err != nil {
-		panic(err)
-	}
-	mustPut(countries.Put(ctx, "AU", country("AU", "Australia")))
-	mustPut(countries.Put(ctx, "EN", country("EN", "England")))
-	mustPut(countries.Put(ctx, "US", country("US", "United States")))
-	mustPut(countries.Put(ctx, "CZ", country("CZ", "Czech Republic")))
-	fmt.Println("The 'countries' map has been populated.")
-	fmt.Println("--------------------")
-}
-
-func selectAllCountries(sqlService sql.Service) {
-	ctx := context.Background()
-	sql := "SELECT c.country from country c"
-	fmt.Println("Select all countries with sql = " + sql)
-	result, err := sqlService.Execute(ctx, sql)
-	if err != nil {
-		fmt.Errorf("querying: %w", err)
-	}
-	defer result.Close()
-	iter, err := result.Iterator()
-	if err != nil {
-		fmt.Errorf("acquiring iterator: %w", err)
-	}
-	for iter.HasNext() {
-		row, err := iter.Next()
-		if err != nil {
-			fmt.Errorf("iterating: %w", err)
-		}
-		country := mustGet(row.GetByColumnName("country"))
-		fmt.Printf("Country = %s\n", country)
-	}
-	fmt.Println("--------------------")
-}
-
-func createMappingForCities(sqlService sql.Service) {
-	// see: https://docs.hazelcast.com/hazelcast/5.1/sql/mapping-to-maps#json-objects
-	fmt.Println("Creating mapping for cities...")
-	mappingSql := fmt.Sprintf(`
-        CREATE OR REPLACE MAPPING city (
-			__key INT,
+		 CREATE OR REPLACE MAPPING 
+		 cities (
+			__key INT,                                        
 			country VARCHAR,
 			city VARCHAR,
-			population BIGINT)
-        TYPE IMAP 
-        OPTIONS (
-            'keyFormat' = 'int',
-            'valueFormat' = 'json-flat'
-        )`)
-	_, err := sqlService.Execute(context.Background(), mappingSql)
+			population INT) TYPE IMAP
+		 OPTIONS ( 
+			'keyFormat' = 'int',
+			'valueFormat' = 'compact',
+			'valueCompactTypeName' = 'city')`)
+	_, err := client.SQL().Execute(context.Background(), mappingQuery)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("Mapping for cities has been created")
-	fmt.Println("--------------------")
+	fmt.Print("OK.")
 }
 
 func populateCities(client *hazelcast.Client) {
-	// see: https://docs.hazelcast.com/hazelcast/5.1/data-structures/creating-a-map#writing-json-to-a-map
-	fmt.Println("Populating 'city' map with JSON values...")
-	ctx := context.Background()
-	cities, err := client.GetMap(ctx, "city")
+	fmt.Print("\nInserting data via SQL...")
+	insertQuery := fmt.Sprintf(`INSERT INTO cities 
+								(__key, city, country, population) VALUES
+								(1, 'London', 'United Kingdom', 9540576),
+								(2, 'Manchester', 'United Kingdom', 2770434),
+								(3, 'New York', 'United States', 19223191),
+								(4, 'Los Angeles', 'United States', 3985520),
+								(5, 'Istanbul', 'Türkiye', 15636243),
+								(6, 'Ankara', 'Türkiye', 5309690),
+								(7, 'Sao Paulo ', 'Brazil', 22429800)`)
+
+	_, err := client.SQL().Execute(context.Background(), insertQuery)
+	if err != nil {
+		// don't panic for duplicated keys.
+		fmt.Errorf("failed. %s", err)
+	} else {
+		fmt.Print("OK.")
+	}
+
+	fmt.Print("\nPutting a city into 'cities' map...")
+	cityMap, err := client.GetMap(context.Background(), "cities")
 	if err != nil {
 		panic(err)
 	}
-	mustPut(cities.Put(ctx, 1, city("AU", "Canberra", 467_194)))
-	mustPut(cities.Put(ctx, 2, city("CZ", "Prague", 1_318_085)))
-	mustPut(cities.Put(ctx, 3, city("EN", "London", 9_540_576)))
-	mustPut(cities.Put(ctx, 4, city("US", "Washington, DC", 7_887_965)))
-	fmt.Println("The 'city' map has been populated.")
-	fmt.Println("--------------------")
+
+	// Let's also add a city as object.
+	city := City{Country: "Brazil", CityName: "Rio de Janeiro", Population: 13634274}
+	_, err = cityMap.Put(context.Background(), int32(8), city)
+	if err != nil {
+		panic(fmt.Errorf("failed. %s", err))
+	}
+	fmt.Print("OK.")
 }
 
-func selectCitiesByCountry(sqlService sql.Service, country string) {
-	sql := "SELECT city, population FROM city WHERE country=?"
-	fmt.Println("Select city and population with sql = " + sql)
-	result, err := sqlService.Execute(context.Background(), sql, country)
+func fetchCities(client *hazelcast.Client) {
+	fmt.Print("\nFetching cities via SQL...")
+
+	stmt := sql.NewStatement("SELECT __key,this FROM cities")
+	result, err := client.SQL().ExecuteStatement(context.Background(), stmt)
 	if err != nil {
-		fmt.Errorf("querying: %w", err)
+		panic(fmt.Errorf("querying: %w", err))
 	}
+
 	defer result.Close()
-	iter, err := result.Iterator()
+
+	iterator, err := result.Iterator()
 	if err != nil {
-		fmt.Errorf("acquiring iterator: %w", err)
+		panic(fmt.Errorf("acquiring iterator: %w", err))
 	}
-	for iter.HasNext() {
-		row, err := iter.Next()
+
+	fmt.Print("OK.")
+	fmt.Println("\n--Results of 'SELECT __key, this FROM cities'")
+	fmt.Printf("| %4s | %20s | %20s | %15s |\n", "id", "country", "city", "population")
+
+	for iterator.HasNext() {
+		row, err := iterator.Next()
 		if err != nil {
-			fmt.Errorf("iterating: %w", err)
+			panic(fmt.Errorf("iterating: %w", err))
 		}
-		city := mustGet(row.GetByColumnName("city"))
-		population := mustGet(row.GetByColumnName("population"))
-		fmt.Printf("City = %s, Population = %d\n", city, population)
+
+		id, err := row.GetByColumnName("__key")
+		if err != nil {
+			panic(fmt.Errorf("getting __key column by name: %w", err))
+		}
+
+		c, err := row.GetByColumnName("this")
+		if err != nil {
+			panic(fmt.Errorf("getting this column by name: %w", err))
+		}
+		city := c.(City)
+
+		fmt.Printf("| %4d | %20s | %20s | %15d |\n", id, city.Country, city.CityName, city.Population)
 	}
-	fmt.Println("--------------------")
+
+	fmt.Println("!! Hint !! You can execute your SQL queries on your Viridian cluster over the management center.")
+	fmt.Println(" 1. Go to 'Management Center' of your Hazelcast Viridian cluster. ")
+	fmt.Println(" 2. Open the 'SQL Browser'. ")
+	fmt.Println(" 3. Try to execute 'SELECT * FROM cities'.")
 }
 
-func selectCountriesAndCities(sqlService sql.Service) {
-	query := fmt.Sprintf(`
-        SELECT c.isoCode, c.country, t.city, t.population
-		  FROM country c
-		       JOIN city t ON c.isoCode = t.country
-	`)
-	fmt.Println("Select country and city data in query that joins tables")
-	fmt.Printf("%4s | %15s | %20s | %15s |\n", "iso", "country", "city", "population")
-	result, err := sqlService.Execute(context.Background(), query)
-	if err != nil {
-		fmt.Errorf("querying: %w", err)
-	}
-	defer result.Close()
-	iter, err := result.Iterator()
-	if err != nil {
-		fmt.Errorf("acquiring iterator: %w", err)
-	}
-	for iter.HasNext() {
-		row, err := iter.Next()
-		if err != nil {
-			fmt.Errorf("iterating: %w", err)
-		}
-		isoCode := mustGet(row.GetByColumnName("isoCode"))
-		country := mustGet(row.GetByColumnName("country"))
-		city := mustGet(row.GetByColumnName("city"))
-		population := mustGet(row.GetByColumnName("population"))
-		fmt.Printf("%4s | %15s | %20s | %15d |\n", isoCode, country, city, population)
-	}
-	fmt.Println("--------------------")
+type City struct {
+	Country    string
+	CityName   string
+	Population int32
 }
 
-// nonStopMapExample shows how to work with Hazelcast maps, where the map is
-// updated continuously.
-func nonStopMapExample(client *hazelcast.Client) {
-	fmt.Println("Now the map named 'map' will be filled with random entries.")
-	ctx := context.TODO()
-	mp, err := client.GetMap(ctx, "map")
-	if err != nil {
-		panic(err)
+// CitySerializer serializes the City object
+type CitySerializer struct{}
+
+func (s CitySerializer) Write(w serialization.CompactWriter, value interface{}) {
+	v := value.(City)
+	w.WriteString("city", &v.CityName)
+	w.WriteString("country", &v.Country)
+	w.WriteInt32("population", v.Population)
+}
+
+func (s CitySerializer) Type() reflect.Type {
+	return reflect.TypeOf(City{})
+}
+
+func (s CitySerializer) TypeName() string {
+	return "city"
+}
+
+func (s CitySerializer) Read(r serialization.CompactReader) interface{} {
+	var cityName string
+	var country string
+	var population int32
+
+	n := r.ReadString("city")
+	if n != nil {
+		cityName = *n
 	}
-	rand.Seed(time.Now().UTC().UnixNano())
-	iterationCounter := 0
-	for {
-		randKey := string(rune(rand.Intn(100000)))
-		_, err := mp.Put(ctx, "key"+randKey, "value"+randKey)
-		if err != nil {
-			panic(err)
-		}
-		if iterationCounter++; iterationCounter == 10 {
-			iterationCounter = 0
-			size, err := mp.Size(ctx)
-			if err != nil {
-				panic(err)
-			}
-			log.Println(fmt.Sprintf("Current map size: %d", size))
-		}
+
+	n = r.ReadString("country")
+	if n != nil {
+		country = *n
 	}
+
+	population = r.ReadInt32("population")
+
+	return City{Country: country, CityName: cityName, Population: population}
 }
