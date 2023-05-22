@@ -24,6 +24,7 @@ import (
 	"github.com/hazelcast/hazelcast-go-client/serialization"
 	"github.com/hazelcast/hazelcast-go-client/sql"
 	"github.com/hazelcast/hazelcast-go-client/types"
+	"os"
 	"path/filepath"
 	"reflect"
 	"time"
@@ -35,6 +36,7 @@ import (
 //
 // See: https://docs.hazelcast.com/cloud/get-started
 func main() {
+	_ = os.Setenv("HZ_CLOUD_COORDINATOR_BASE_URL", "YOUR_DISCOVERY_URL")
 	ctx := context.Background()
 	config := hazelcast.NewConfig()
 	config.Cluster.Name = "YOUR_CLUSTER_NAME"
